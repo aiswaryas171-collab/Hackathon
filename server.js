@@ -17,7 +17,6 @@ import {
   updateStoreNutrientInfo,
   getRandomMenu,
 } from "./utils.js";
-const mysql = require("mysql2");
 const GEMINI_API_KEY = "AIzaSyDMYbV8kjvSEUyQTCfCd-Bmfmhg-b45wfE";
 const app = express();
 const topMenuCount = 5;
