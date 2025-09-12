@@ -86,7 +86,7 @@ app.post("/menu", async (req, res) => {
     res.json({ status: "success", data: nutrientMenu });
   } catch (err) {
     console.log("Whole menu Error:", err);
-    res.status(400).json({ error: err.message });
+    return res.status(400).json({ error: err.message });
   }
 });
 
@@ -138,20 +138,11 @@ app.get("/auth", async (req, res) => {
         await storeNutrientInfo(pool, customer_id, nutrientUserData);
       }
 
-      return {
-        statusCode: 302,
-        body: "",
-        headers: {
-          Location: `https://sit-foodhub-uk.stage.t2sonline.com/`,
-        },
-      };
+      return res.redirect(302, `https://sit-foodhub-uk.stage.t2sonline.com/`);
     } catch (error) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({
-          error: error.response?.data || error.message,
-        }),
-      };
+      return res
+        .status(400)
+        .json({ error: error.response?.data || error.message });
     }
   }
   const location = generateAuthCodeRedirectUrl(
@@ -161,13 +152,7 @@ app.get("/auth", async (req, res) => {
     state
   );
 
-  return Promise.resolve({
-    body: "",
-    statusCode: 302,
-    headers: {
-      Location: location,
-    },
-  });
+  return res.redirect(302, location);
 });
 
 const PORT = process.env.PORT || 3000;
