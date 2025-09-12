@@ -151,7 +151,7 @@ app.get("/auth", async (req, res) => {
     CLIENT_ID,
     state
   );
-
+  console.log("location", location);
   return res.redirect(302, location);
 });
 
