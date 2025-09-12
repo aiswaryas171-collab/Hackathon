@@ -136,7 +136,7 @@ app.get("/auth", async (req, res) => {
         userNutrientData = await getGoggleFitNutrientInfo(
           response?.data?.access_token
         );
-        await storeNutrientInfo(pool, customer_id, nutrientUserData);
+        await storeNutrientInfo(pool, customer_id, userNutrientData);
       }
 
       return res.redirect(302, `https://sit-foodhub-uk.stage.t2sonline.com/`);
