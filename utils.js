@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import zlib from "zlib";
 import { decode } from "jsonwebtoken";
+import axios from "axios";
 
 export function decodeCompressedPayload(payload) {
   try {

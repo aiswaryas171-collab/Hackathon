@@ -6,6 +6,7 @@
 
 import express from "express";
 import mysql from "mysql2/promise";
+import axios from "axios";
 import {
   menuToNutrition,
   decodeCompressedPayload,
