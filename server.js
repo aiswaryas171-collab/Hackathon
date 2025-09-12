@@ -139,7 +139,7 @@ app.get("/auth", async (req, res) => {
         await storeNutrientInfo(pool, customer_id, userNutrientData);
       }
 
-      return res.redirect(302, `https://sit-foodhub-uk.stage.t2sonline.com/`);
+      return res.redirect(302, `http://localhost:8080/location/london/EC1A2AT`);
     } catch (error) {
       return res
         .status(400)
