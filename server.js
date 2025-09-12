@@ -1,28 +1,40 @@
 import express from "express";
-import zlib from "zlib";
+import { menuToNutrition, decodeCompressedPayload } from "./utils.js";
 
 const app = express();
+const topMenuCount = 5;
 app.use(express.json({ limit: "2mb" })); // allow larger payloads
 
-// API endpoint
-app.post("/api/data", (req, res) => {
+//call from UI
+app.post("/api/data", async (req, res) => {
   try {
     const { payload } = req.body;
     if (!payload) {
       return res.status(400).json({ error: "No payload provided" });
     }
+    //get menu from UI and decompress it
+    const menu = await decodeCompressedPayload(req.body.payload);
 
-    // decode + decompress
-    const buffer = Buffer.from(payload, "base64");
-    const decompressed = zlib.inflateSync(buffer).toString("utf8");
-    const obj = JSON.parse(decompressed);
+    //TODO
+    //fetch from db
+    const userNutrientData = {
+      steps: 8000,
+      calories: 2100,
+      sleep: 5,
+      weight: 70,
+      step_count: 7541,
+    };
 
-    console.log("✅ Received:", obj);
+    //convert menu to nutrient
+    const nutrientMenu = await menuToNutrition(
+      menu,
+      userNutrientData,
+      topMenuCount
+    );
 
-    res.json({ status: "ok", received: obj });
+    res.json({ status: "success", data: nutrientMenu });
   } catch (err) {
-    console.error("❌ Error:", err);
-    res.status(400).json({ error: "Invalid compressed payload" });
+    res.status(400).json({ error: err.message });
   }
 });
 
