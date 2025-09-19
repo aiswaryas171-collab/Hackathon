@@ -32,23 +32,29 @@ export async function menuToNutrition(
   });
 
   const prompt = `
-    You are a nutrition assistant.
-    User profile:
-    ${JSON.stringify(userNutrients, null, 2)}
-    
-    Menu items:
-    ${JSON.stringify(
-      menu.map((m) => ({
-        id: m.id,
-        name: m.name,
-        description: m.description,
-      })),
-      null,
-      2
-    )}
-    
-    Return JSON array with: {id, name, benefit, match_score (0-100)}.
-      `;
+  You are a nutrition assistant.
+  User profile:
+  ${JSON.stringify(userNutrients, null, 2)}
+  
+  Menu items:
+  ${JSON.stringify(
+    menu
+      .flatMap((category) =>
+        category.subcat.flatMap((sub) =>
+          sub.item.map((it) => ({
+            id: it.id,
+            name: it.name,
+            description: it.description,
+          }))
+        )
+      )
+      .slice(0, 10),
+    null,
+    2
+  )}
+  
+  Return JSON array with: {id, name, benefit, match_score (0-100)}.
+  `;
 
   // call with plain string, no extra options
   const result = await model.generateContent(prompt);
@@ -63,7 +69,7 @@ export async function menuToNutrition(
   try {
     recommendations = JSON.parse(text);
   } catch (e) {
-    console.error("❌ Failed to parse JSON:", text);
+    console.log("❌ Failed to parse JSON:", text);
     return null;
   }
 
@@ -141,69 +147,9 @@ export const decodeJWT = (jwtStr) => {
   return decode(jwtStr);
 };
 
-const randomValue = (min, max) =>
-  Math.floor(Math.random() * (max - min + 1)) + min;
-
-const randomNutritionAdvice = () => {
-  const advices = [
-    "Increase protein intake to support muscle recovery.",
-    "Reduce sugar for better energy balance.",
-    "Add more magnesium-rich foods like nuts and spinach.",
-    "Increase dietary fiber with whole grains and vegetables.",
-    "Cut down on sodium to maintain healthy blood pressure.",
-    "Balance carbs with lean proteins and healthy fats.",
-    "Stay hydrated—drink at least 8 glasses of water daily.",
-    "Include more vitamin C-rich foods like oranges and bell peppers.",
-    "Boost calcium intake with dairy or fortified alternatives.",
-    "Eat omega-3 rich foods like salmon, chia seeds, and walnuts.",
-    "Limit processed foods and opt for fresh, whole options.",
-    "Add iron-rich foods like leafy greens and lentils to prevent fatigue.",
-    "Snack on nuts and seeds for sustained energy.",
-    "Replace refined carbs with whole grains.",
-    "Add more potassium-rich foods like bananas and sweet potatoes.",
-    "Include probiotics like yogurt or kefir for gut health.",
-    "Plan smaller, balanced meals throughout the day instead of skipping.",
-    "Cut back on fried foods and unhealthy oils.",
-    "Eat more antioxidant-rich foods like berries and green tea.",
-    "Include lean meats or plant proteins in every meal.",
-  ];
-
-  return advices[Math.floor(Math.random() * advices.length)];
-};
-
-const extractNutritionSentence = (points) => {
-  if (!points || points.length === 0) {
-    // No data → fallback with random advice
-    return randomNutritionAdvice();
-  }
-
-  // If nutrition data is available, create a sentence based on it
-  let protein = 0,
-    sugar = 0,
-    magnesium = 0;
-  points.forEach((p) => {
-    p.value.forEach((v) => {
-      if (v.key === "protein") protein += v.fpVal;
-      if (v.key === "sugar") sugar += v.fpVal;
-      if (v.key === "magnesium") magnesium += v.fpVal;
-    });
-  });
-
-  // Simple thresholds (you can tweak these ranges)
-  if (protein < 60) return "Increase protein intake to support muscle growth.";
-  if (sugar > 30) return "Reduce sugar to maintain healthy energy levels.";
-  if (magnesium < 250)
-    return "Eat magnesium-rich foods like spinach, nuts, or seeds.";
-
-  return "Your nutrition intake looks balanced today.";
-};
-
 export async function getGoggleFitNutrientInfo(accessToken) {
   console.log("<---- Getting Google fit data ----->");
-  if (!accessToken) {
-    accessToken =
-      "ya29.a0AS3H6NyjHzOI4dtr8k5k9hAN8k99LnPfy-LGeuwHifEIjB-fs2GwwxJu0zPhlRdqJK2cF6M1_Gl3OqCe81vZmNU5uzPj5toq8qspTO1CfNHYfuMW_yC4EghBc21dYDzz4zKvTGN-M5uxirEGmsy8ISutizNG35ylVep3PxYJFyvbOKs0fvGa1HXXMQaIBML3RkqzLDIaCgYKAfYSARESFQHGX2Mi8SHkDYETx4efvgL4rqlFig0206";
-  }
+
   const START_TIME_NANOS = "1694304000000000000";
   const END_TIME_NANOS = "1694390400000000000";
 
@@ -242,53 +188,30 @@ export async function getGoggleFitNutrientInfo(accessToken) {
 
   // ---- FORMAT THE FINAL OUTPUT ----
   const formatted = {
-    nutrition: extractNutritionSentence(combinedResults.nutrition.point),
+    nutrition: combinedResults.nutrition.point,
     sleep:
       combinedResults.sleep.point?.length > 0
         ? "good"
         : ["low", "medium", "high"][Math.floor(Math.random() * 3)],
 
-    calories_burnt:
-      combinedResults.calories.point?.length > 0
-        ? Math.round(
-            combinedResults.calories.point.reduce(
-              (sum, p) => sum + (p.value?.[0]?.fpVal || 0),
-              0
-            )
-          )
-        : randomValue(40, 80),
+    calories_burnt: Math.round(
+      combinedResults.calories.point.reduce(
+        (sum, p) => sum + (p.value?.[0]?.fpVal || 0),
+        0
+      )
+    ),
 
-    step_count:
-      combinedResults.activity.point?.length > 0
-        ? `${randomValue(100, 300)}/hour` // activity doesn’t directly give steps, needs step_count dataset
-        : `${randomValue(100, 300)}/hour`,
+    step_count: combinedResults.activity.point,
 
-    heart_count:
-      combinedResults.heart_rate?.point?.length > 0
-        ? Math.round(
-            combinedResults.heart_rate.point.reduce(
-              (sum, p) => sum + (p.value?.[0]?.fpVal || 0),
-              0
-            ) / combinedResults.heart_rate.point.length
-          )
-        : randomValue(70, 100),
+    heart_count: Math.round(
+      combinedResults.heart_rate.point.reduce(
+        (sum, p) => sum + (p.value?.[0]?.fpVal || 0),
+        0
+      ) / combinedResults.heart_rate.point.length
+    ),
 
-    glucose:
-      combinedResults.glucose.point?.length > 0
-        ? combinedResults.glucose.point[0].value?.[0]?.fpVal ||
-          randomValue(110, 130)
-        : randomValue(110, 130),
+    glucose: combinedResults.glucose.point[0].value?.[0]?.fpVal,
   };
 
   return formatted;
-}
-
-export function getRandomMenu(menu, count = 5) {
-  const shuffled = [...menu].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, count).map((item) => ({
-    id: item.id,
-    name: item.name,
-    description: item.description,
-    benefit: "",
-  }));
 }

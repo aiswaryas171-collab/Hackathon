@@ -15,10 +15,9 @@ import {
   decodeJWT,
   getGoggleFitNutrientInfo,
   storeNutrientInfo,
-  updateStoreNutrientInfo,
-  getRandomMenu,
 } from "./utils.js";
-const GEMINI_API_KEY = "AIzaSyDMYbV8kjvSEUyQTCfCd-Bmfmhg-b45wfE";
+// const GEMINI_API_KEY = "AIzaSyDMYbV8kjvSEUyQTCfCd-Bmfmhg-b45wfE";
+const GEMINI_API_KEY = "AIzaSyD1eDLzrfY2bP5BrTTjoP0Iy-9c6q1Y2Og";
 const app = express();
 const topMenuCount = 5;
 app.use(express.json({ limit: "2mb" })); // allow larger payloads
@@ -41,14 +40,15 @@ const pool = mysql.createPool({
 //call from UI
 app.post("/menu", async (req, res) => {
   try {
-    console.log("Menu Body----->", JSON.stringify(req.body));
-    console.log("Menu Querystring--->:", req.body);
-    console.log("Menu Response--->:", res);
+    // console.log("Menu Body----->", JSON.stringify(req.body));
+    // console.log("Menu Querystring--->:", req.body);
+    // console.log("Menu Response--->:", res);
 
     const { payload } = req.body;
     const state = req.query?.state;
     const jwtPayload = decodeJWT(state);
     const customer_id = jwtPayload?.sub;
+    console.log("Customer ID:", customer_id);
 
     if (!payload) {
       return res.status(400).json({ error: "No payload provided" });
@@ -60,28 +60,17 @@ app.post("/menu", async (req, res) => {
     //get nutrient data from db
     let userNutrientData = await getNutrientData(pool, customer_id);
 
-    if (!userNutrientData) {
-      //default nutrient data
-      userNutrientData = {
-        nutrition: "Limit processed foods and opt for fresh, whole options.",
-        sleep: "high",
-        calories_burnt: 2324,
-        step_count: "164/hour",
-        heart_count: 98,
-        glucose: 114,
-      };
-    }
-
     //convert menu to nutrient
-    let nutrientMenu = await menuToNutrition(
-      menu,
-      userNutrientData,
-      topMenuCount,
-      GEMINI_API_KEY
-    );
-    //default menu
-    if (!nutrientMenu) {
-      nutrientMenu = getRandomMenu(menu, topMenuCount);
+    let nutrientMenu;
+    try {
+      nutrientMenu = await menuToNutrition(
+        menu,
+        userNutrientData,
+        topMenuCount,
+        GEMINI_API_KEY
+      );
+    } catch (err) {
+      console.log("Error in llm menu converstion:", err);
     }
 
     res.json({ status: "success", data: nutrientMenu });
@@ -95,7 +84,7 @@ app.get("/auth", async (req, res) => {
   const CLIENT_ID =
     "970816301355-sdsarnnt91nrndcarg6jvf9gsd78t6t2.apps.googleusercontent.com";
   const CLIENT_SECRET = "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";
-  const REDIRECT_URI = "https://hackathon-5iib.onrender.com/auth";
+  const REDIRECT_URI = "https://bac613105882.ngrok-free.app/auth";
   const SCOPES = [
     "https://www.googleapis.com/auth/fitness.activity.read",
     "https://www.googleapis.com/auth/fitness.body.read",
@@ -106,8 +95,6 @@ app.get("/auth", async (req, res) => {
     "https://www.googleapis.com/auth/fitness.blood_glucose.read",
   ];
 
-  console.log("Auth Request--->", req);
-  console.log("Auth Response--->", res);
   console.log("Auth query--->", req.query);
   const code = req.query?.code;
   const state = req.query?.state;
@@ -152,7 +139,7 @@ app.get("/auth", async (req, res) => {
     CLIENT_ID,
     state
   );
-  console.log("location", location);
+  console.log("location ", location);
   return res.redirect(302, location);
 });
 
